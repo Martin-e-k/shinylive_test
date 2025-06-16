@@ -1,10 +1,11 @@
 library(shiny)
 
 ui <- fluidPage(
-  titlePanel("Old Faithful Geyser Data"),
+  titlePanel("Upload CSV & Download Plot"),
   sidebarLayout(
     sidebarPanel(
-      sliderInput("bins", "Number of bins:", min = 1, max = 50, value = 30),
+      fileInput("file", "Choose CSV File", accept = ".csv"),
+      sliderInput("bins", "Number of bins:", 1, 50, 30),
       downloadButton("downloadPlot", "Download Plot")
     ),
     mainPanel(
@@ -14,8 +15,20 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
+  
+  # Reactive data: uploaded CSV or default faithful dataset
+  data <- reactive({
+    if (is.null(input$file)) {
+      faithful$waiting
+    } else {
+      df <- read.csv(input$file$datapath)
+      # Assuming the CSV has one numeric column to plot; adjust as needed
+      df[[1]]
+    }
+  })
+  
   output$distPlot <- renderPlot({
-    x <- faithful$waiting
+    x <- data()
     bins <- seq(min(x), max(x), length.out = input$bins + 1)
     hist(x, breaks = bins, col = "skyblue", border = "white",
          main = "Histogram of Waiting Times", xlab = "Waiting time (minutes)")
@@ -23,11 +36,11 @@ server <- function(input, output) {
   
   output$downloadPlot <- downloadHandler(
     filename = function() {
-      paste0("oldfaithful_plot_", Sys.Date(), ".png")
+      paste0("plot_", Sys.Date(), ".png")
     },
     content = function(file) {
       png(file, width = 800, height = 600)
-      x <- faithful$waiting
+      x <- data()
       bins <- seq(min(x), max(x), length.out = input$bins + 1)
       hist(x, breaks = bins, col = "skyblue", border = "white",
            main = "Histogram of Waiting Times", xlab = "Waiting time (minutes)")
@@ -36,6 +49,6 @@ server <- function(input, output) {
   )
 }
 
-
 shinyApp(ui, server)
+
 
